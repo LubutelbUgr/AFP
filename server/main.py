@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 
-from db.db import engine
+from db.db import init_db
 
 
 import json
@@ -18,7 +18,7 @@ app.add_middleware(
 )
 
 
-# models.Base.metadata.create_all(bind=engine)
+init_db()
 
 # ------ПРОВЕРКА-------
 @app.get("/")
