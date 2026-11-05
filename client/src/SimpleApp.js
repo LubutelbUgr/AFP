@@ -102,9 +102,18 @@ const REQUIRED_FIELDS = [
     'light',
 ];
 
+// Заглушка: настоящая проверка пароля должна быть на сервере.
+export const ADMIN_PASSWORD = 'lotov';
+
+const AUTH_KEY = 'admin-auth';
+
 function AdminPanel({ onCreate }) {
     const [form, setForm] = useState(EMPTY_FORM);
     const [message, setMessage] = useState('');
+    const [password, setPassword] = useState('');
+    const [authorized, setAuthorized] = useState(
+        () => window.sessionStorage.getItem(AUTH_KEY) === 'yes'
+    );
 
     const handleChange = (event) => {
         const { name, value } = event.target;
@@ -154,6 +163,42 @@ function AdminPanel({ onCreate }) {
             </label>
         </p>
     );
+
+    const handleLogin = (event) => {
+        event.preventDefault();
+
+        if (password === ADMIN_PASSWORD) {
+            window.sessionStorage.setItem(AUTH_KEY, 'yes');
+            setAuthorized(true);
+            setMessage('');
+            return;
+        }
+
+        setMessage('Неверный пароль');
+    };
+
+    if (!authorized) {
+        return (
+            <form onSubmit={handleLogin}>
+                <h2>Вход в админку</h2>
+                <p>
+                    <label>
+                        Пароль
+                        <br />
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(event) => setPassword(event.target.value)}
+                        />
+                    </label>
+                </p>
+                <p>
+                    <button type="submit">Войти</button>
+                </p>
+                {message && <p>{message}</p>}
+            </form>
+        );
+    }
 
     return (
         <form onSubmit={handleSubmit}>

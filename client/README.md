@@ -1,3 +1,16 @@
+# Клиент AFP
+
+Простой клиент ботанического сада без CSS: каталог растений + админка с паролем.
+
+- **Запуск:** `npm install`, затем `npm start` → http://localhost:3000
+- **Пароль админки:** `admin` (заглушка, проверяется в `src/SimpleApp.js`; настоящая защита должна быть на сервере)
+- **Данные:** `src/data/mockPlants.js`; добавленные растения — `localStorage` (ключ `plants-v2`; при изменении моков поднимайте версию ключа)
+- **Подключение сервера:** `src/services/plantsApi.js` → `USE_SERVER = true`, `SERVER_URL`; нужны `GET /plants` и `POST /plants`
+
+Точка входа — `src/index.js`, он рендерит `src/SimpleApp.js`. Скелетный `src/App.js` не используется.
+
+---
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
