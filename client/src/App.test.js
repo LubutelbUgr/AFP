@@ -1,19 +1,19 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import SimpleApp, { ADMIN_PASSWORD } from './SimpleApp';
+import SimpleApp from './SimpleApp';
 
 const fill = (label, value) => {
     fireEvent.change(screen.getByLabelText(label), { target: { value } });
 };
 
-const openAdmin = () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Админка' }));
-    fill('Пароль', ADMIN_PASSWORD);
+const login = (name, password) => {
+    fireEvent.click(screen.getByRole('button', { name: 'Вход' }));
+    fill('Логин', name);
+    fill('Пароль', password);
     fireEvent.click(screen.getByRole('button', { name: 'Войти' }));
 };
 
 beforeEach(() => {
     window.localStorage.clear();
-    window.sessionStorage.clear();
 });
 
 test('каталог показывает растение из заглушки', async () => {
@@ -24,28 +24,37 @@ test('каталог показывает растение из заглушки
     expect(screen.getByRole('button', { name: 'Каталог (1)' })).toBeInTheDocument();
 });
 
-test('админка просит пароль', async () => {
+test('посетитель видит каталог и ищет по названию или семейству', async () => {
     render(<SimpleApp />);
-    await screen.findByText('Завьяловский гладкий вареник');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Админка' }));
+    expect(screen.getByRole('heading', { name: 'Ботанический сад' })).toBeInTheDocument();
+    expect(await screen.findByText('Завьяловский гладкий вареник')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Каталог (1)' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Списать' })).not.toBeInTheDocument();
 
-    expect(screen.getByRole('heading', { name: 'Вход в админку' })).toBeInTheDocument();
+    fill('Поиск по названию или семейству', 'вареник');
+    expect(screen.getByText('Завьяловский гладкий вареник')).toBeInTheDocument();
 
-    fill('Пароль', 'неверный');
-    fireEvent.click(screen.getByRole('button', { name: 'Войти' }));
-    expect(await screen.findByText('Неверный пароль')).toBeInTheDocument();
-
-    fill('Пароль', ADMIN_PASSWORD);
-    fireEvent.click(screen.getByRole('button', { name: 'Войти' }));
-    expect(await screen.findByRole('heading', { name: 'Новое растение' })).toBeInTheDocument();
+    fill('Поиск по названию или семейству', 'нет-такого');
+    expect(screen.getByText('Ничего не найдено.')).toBeInTheDocument();
 });
 
-test('админка добавляет растение', async () => {
+test('вход с неверным паролем не даёт прав куратора', async () => {
     render(<SimpleApp />);
     await screen.findByText('Завьяловский гладкий вареник');
 
-    openAdmin();
+    login('curator', 'неверный');
+
+    expect(await screen.findByText('Неверный логин или пароль')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Списать' })).not.toBeInTheDocument();
+});
+
+test('куратор добавляет растение', async () => {
+    render(<SimpleApp />);
+    await screen.findByText('Завьяловский гладкий вареник');
+
+    login('curator', 'kokain');
+    fireEvent.click(screen.getByRole('button', { name: 'Добавить растение' }));
 
     fill(/Русское название/, 'Тестовое растение');
     fill(/Латинское название/, 'Testus plantus');
@@ -60,5 +69,34 @@ test('админка добавляет растение', async () => {
 
     expect(await screen.findByText('Добавлено: Тестовое растение')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Каталог (2)' })).toBeInTheDocument();
+});
+
+test('куратор списывает растение своего сектора', async () => {
+    render(<SimpleApp />);
+    await screen.findByText('Завьяловский гладкий вареник');
+
+    login('curator', 'kokain');
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Списать' }));
+
+    expect(await screen.findByText('Списано')).toBeInTheDocument();
+});
+
+test('администратор БД видит заглушки бэкапа и токенов', async () => {
+    render(<SimpleApp />);
+    await screen.findByText('Завьяловский гладкий вареник');
+
+    login('dbadmin', 'lotov');
+
+    expect(screen.getByRole('heading', { name: 'Администратор БД' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Сделать бэкап' }));
+    expect(await screen.findByText(/Бэкап создан/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Структура таблиц' }));
+    expect(await screen.findByText('plants')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Выдать токен API' }));
+    expect(await screen.findByText(/Токен API выдан: afp_/)).toBeInTheDocument();
 });
 

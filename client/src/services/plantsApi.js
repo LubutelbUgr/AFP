@@ -67,3 +67,70 @@ export async function createPlant(plant) {
     writeLocalPlants([...plants, created]);
     return created;
 }
+
+// Изменение растения (куратор своего сектора). На сервере: PUT /plants/{id}
+export async function updatePlant(id, plant) {
+    if (USE_SERVER) {
+        return request(`/plants/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(plant),
+        });
+    }
+
+    const plants = readLocalPlants();
+    const updated = { ...plant, id };
+
+    writeLocalPlants(plants.map((item) => (item.id === id ? updated : item)));
+    return updated;
+}
+
+// Списание растения: помечаем статус, запись остаётся в базе.
+// На сервере: POST /plants/{id}/retire
+export async function retirePlant(id) {
+    if (USE_SERVER) {
+        return request(`/plants/${id}/retire`, { method: 'POST' });
+    }
+
+    const plants = readLocalPlants();
+    let retired = null;
+
+    writeLocalPlants(
+        plants.map((item) => {
+            if (item.id !== id) {
+                return item;
+            }
+
+            retired = { ...item, care_status: 'written_off' };
+            return retired;
+        })
+    );
+
+    return retired;
+}
+
+// Заглушки администратора БД. Всё это делает сервер Python (root-доступ):
+// бэкапы, структура таблиц, выдача токенов API.
+export async function createBackup() {
+    if (USE_SERVER) {
+        return request('/admin/backup', { method: 'POST' });
+    }
+
+    return { file: `backup-${new Date().toISOString().slice(0, 19)}.db` };
+}
+
+export async function listTables() {
+    if (USE_SERVER) {
+        return request('/admin/tables');
+    }
+
+    return ['plants', 'plant_characteristics', 'categories', 'exhibits', 'locations', 'garden_staff'];
+}
+
+export async function issueApiToken() {
+    if (USE_SERVER) {
+        return request('/admin/tokens', { method: 'POST' });
+    }
+
+    return { token: `afp_${Math.random().toString(36).slice(2, 10)}` };
+}
